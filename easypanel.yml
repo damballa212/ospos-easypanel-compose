@@ -1,0 +1,43 @@
+services:
+  - name: ospos-app
+    image: jekkos/opensourcepos:master
+    port: 80
+    env:
+      - CI_ENVIRONMENT=production
+      - FORCE_HTTPS=false
+      - PHP_TIMEZONE=UTC
+      - MYSQL_USERNAME=admin
+      - MYSQL_PASSWORD=pointofsale
+      - MYSQL_DB_NAME=ospos
+      - MYSQL_HOST_NAME=ospos-db
+    volumes:
+      - ospos-uploads:/app/writable/uploads
+      - ospos-logs:/app/writable/logs
+    depends_on:
+      - ospos-db
+
+  - name: ospos-db
+    image: mysql:8.0
+    env:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=ospos
+      - MYSQL_USER=admin
+      - MYSQL_PASSWORD=pointofsale
+    volumes:
+      - ospos-db-data:/var/lib/mysql
+      - ospos-db-init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+
+  - name: ospos-sql-init
+    image: jekkos/opensourcepos:sql-master
+    command: /bin/sh -c 'exit 0'
+    volumes:
+      - ospos-db-init:/docker-entrypoint-initdb.d
+    depends_on:
+      - ospos-db
+
+volumes:
+  - ospos-db-data
+  - ospos-db-init
+  - ospos-uploads
+  - ospos-logs
