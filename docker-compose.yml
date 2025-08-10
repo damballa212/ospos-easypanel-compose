@@ -1,58 +1,52 @@
 services:
-  ospos-db:
-    image: mysql:8.0
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ospos_root_password}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-ospos}
-      MYSQL_USER: ${MYSQL_USER:-ospos_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-ospos_password}
-    volumes:
-      - ospos_mysql_data:/var/lib/mysql
-    networks:
-      - ospos-network
-    command: --default-authentication-plugin=mysql_native_password
-
   ospos-app:
-    image: opensourcepos/opensourcepos:latest
+    image: jekkos/opensourcepos:master
     restart: unless-stopped
     depends_on:
       - ospos-db
-    environment:
-      # Database Configuration
-      DB_HOST: ospos-db
-      DB_NAME: ${MYSQL_DATABASE:-ospos}
-      DB_USER: ${MYSQL_USER:-ospos_user}
-      DB_PASSWORD: ${MYSQL_PASSWORD:-ospos_password}
-      DB_PORT: 3306
-      
-      # Application Configuration
-      OSPOS_TIMEZONE: ${OSPOS_TIMEZONE:-America/Mexico_City}
-      OSPOS_LANGUAGE: ${OSPOS_LANGUAGE:-spanish}
-      
-      # Security
-      OSPOS_ENCRYPTION_KEY: ${OSPOS_ENCRYPTION_KEY:-change-this-32-character-key}
-      
-      # Email Configuration (opcional)
-      OSPOS_MAIL_PROTOCOL: ${OSPOS_MAIL_PROTOCOL:-smtp}
-      OSPOS_MAIL_HOST: ${OSPOS_MAIL_HOST:-smtp.gmail.com}
-      OSPOS_MAIL_PORT: ${OSPOS_MAIL_PORT:-587}
-      OSPOS_MAIL_USERNAME: ${OSPOS_MAIL_USERNAME:-}
-      OSPOS_MAIL_PASSWORD: ${OSPOS_MAIL_PASSWORD:-}
-      OSPOS_MAIL_CRYPTO: ${OSPOS_MAIL_CRYPTO:-tls}
-    volumes:
-      - ospos_uploads:/var/www/html/application/uploads
-      - ospos_logs:/var/www/html/application/logs
     networks:
       - ospos-network
+    volumes:
+      - ospos-uploads:/app/writable/uploads
+      - ospos-logs:/app/writable/logs
+    environment:
+      - CI_ENVIRONMENT=${CI_ENVIRONMENT:-production}
+      - FORCE_HTTPS=${FORCE_HTTPS:-false}
+      - PHP_TIMEZONE=${PHP_TIMEZONE:-UTC}
+      - MYSQL_USERNAME=${MYSQL_USERNAME:-admin}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-pointofsale}
+      - MYSQL_DB_NAME=${MYSQL_DB_NAME:-ospos}
+      - MYSQL_HOST_NAME=ospos-db
+
+  ospos-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    networks:
+      - ospos-network
+    volumes:
+      - ospos-db-data:/var/lib/mysql
+      - ospos-db-init:/docker-entrypoint-initdb.d
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DB_NAME:-ospos}
+      - MYSQL_USER=${MYSQL_USERNAME:-admin}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-pointofsale}
+    command: --default-authentication-plugin=mysql_native_password
+
+  # SQL initialization container
+  ospos-sql-init:
+    image: jekkos/opensourcepos:sql-master
+    command: /bin/sh -c 'exit 0'
+    volumes:
+      - ospos-db-init:/docker-entrypoint-initdb.d
+    depends_on:
+      - ospos-db
 
 volumes:
-  ospos_mysql_data:
-    driver: local
-  ospos_uploads:
-    driver: local
-  ospos_logs:
-    driver: local
+  ospos-db-data:
+  ospos-db-init:
+  ospos-uploads:
+  ospos-logs:
 
 networks:
   ospos-network:
