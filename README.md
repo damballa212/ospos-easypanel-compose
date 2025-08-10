@@ -1,6 +1,6 @@
 # OSPOS en Easypanel - Configuración Docker Compose
 
-Este repositorio contiene la configuración necesaria para instalar **Open Source Point of Sale (OSPOS)** en tu VPS de Hostinger usando Easypanel con la plantilla "Compose".
+Este repositorio contiene la configuración necesaria para instalar **Open Source Point of Sale (OSPOS)** en tu VPS de Hostinger usando Easypanel con la plantilla "Compose" desde Git.
 
 ## 📋 Requisitos Previos
 
@@ -18,39 +18,52 @@ Este repositorio contiene la configuración necesaria para instalar **Open Sourc
 3. Selecciona **Compose** como plantilla
 4. Asigna un nombre al servicio: `ospos`
 
-### Paso 2: Configurar el Docker Compose
+### Paso 2: Configurar el Repositorio Git
 
-1. Copia el contenido del archivo `docker-compose.yml` de este repositorio
-2. Pégalo en el editor de Easypanel
-3. **Importante**: Los puertos han sido eliminados para que Easypanel asigne automáticamente puertos disponibles
+1. **URL del repositorio**: `https://github.com/damballa212/ospos-easypanel-compose.git`
+2. **Rama**: `main`
+3. **Ruta de compilación**: `/` (raíz del repositorio)
+4. **Archivo Docker Compose**: `docker-compose.yml`
 
 ### Paso 3: Configurar Variables de Entorno
 
-Antes de desplegar, **DEBES** modificar las siguientes variables en el archivo docker-compose.yml:
+En la sección **Environment** de Easypanel, configura las siguientes variables:
 
-```yaml
-# Cambiar estas credenciales por seguridad
-MYSQL_ROOT_PASSWORD: tu_password_root_seguro
-MYSQL_PASSWORD: tu_password_ospos_seguro
-DB_PASSWORD: tu_password_ospos_seguro  # Debe coincidir con MYSQL_PASSWORD
+#### Variables Obligatorias:
+```bash
+# Credenciales de Base de Datos (CAMBIAR POR SEGURIDAD)
+MYSQL_ROOT_PASSWORD=tu_password_root_muy_seguro
+MYSQL_PASSWORD=tu_password_ospos_muy_seguro
+MYSQL_DATABASE=ospos
+MYSQL_USER=ospos_user
 
-# Generar una clave de encriptación de 32 caracteres
-OSPOS_ENCRYPTION_KEY: tu-clave-de-32-caracteres-aqui
+# Clave de Encriptación (32 caracteres - CRÍTICO)
+OSPOS_ENCRYPTION_KEY=tu-clave-de-32-caracteres-unica
+```
 
-# Configurar tu zona horaria
-OSPOS_TIMEZONE: America/Mexico_City  # Ajustar según tu ubicación
+#### Variables Opcionales:
+```bash
+# Configuración Regional
+OSPOS_TIMEZONE=America/Mexico_City
+OSPOS_LANGUAGE=spanish
 
-# Configurar dominio (opcional)
-traefik.http.routers.ospos.rule=Host(`ospos.tudominio.com`)
+# Configuración de Email (opcional)
+OSPOS_MAIL_PROTOCOL=smtp
+OSPOS_MAIL_HOST=smtp.gmail.com
+OSPOS_MAIL_PORT=587
+OSPOS_MAIL_USERNAME=tu-email@gmail.com
+OSPOS_MAIL_PASSWORD=tu-password-de-aplicacion
+OSPOS_MAIL_CRYPTO=tls
 ```
 
 ### Paso 4: Desplegar el Servicio
 
 1. Haz clic en **Deploy** en Easypanel
-2. Espera a que se descarguen las imágenes y se inicien los contenedores
-3. Verifica que ambos servicios estén corriendo:
-   - `ospos-mysql` (Base de datos)
-   - `ospos-web` (Aplicación web)
+2. Espera a que se clone el repositorio
+3. Espera a que se descarguen las imágenes Docker
+4. Verifica que ambos servicios estén corriendo:
+   - `ospos-db` (Base de datos MySQL)
+   - `ospos-app` (Aplicación web OSPOS)
 
 ## 🔧 Configuración Post-Instalación
 
@@ -61,38 +74,55 @@ traefik.http.routers.ospos.rule=Host(`ospos.tudominio.com`)
    - **Usuario**: `admin`
    - **Contraseña**: `pointofsale`
 
-### Configuración Inicial Recomendada
+### ⚠️ Configuración Crítica de Seguridad
+
+**INMEDIATAMENTE después del primer acceso:**
 
 1. **Cambiar credenciales de administrador**:
    - Ve a `Empleados` → `Administrar Empleados`
    - Edita el usuario admin y cambia la contraseña
 
-2. **Configurar información de la empresa**:
+2. **Verificar clave de encriptación**:
+   - Asegúrate de haber configurado `OSPOS_ENCRYPTION_KEY` con 32 caracteres únicos
+   - Nunca uses la clave por defecto en producción
+
+### Configuración Inicial Recomendada
+
+1. **Configurar información de la empresa**:
    - Ve a `Configuración` → `Información de la Empresa`
    - Completa todos los datos de tu negocio
 
-3. **Configurar impuestos y moneda**:
+2. **Configurar impuestos y moneda**:
    - Ve a `Configuración` → `Configuración de Impuestos`
    - Configura según las leyes fiscales de tu país
+
+3. **Configurar backup automático**:
+   - Configura backups regulares desde Easypanel
+   - Frecuencia recomendada: diaria
 
 ## 🔒 Consideraciones de Seguridad
 
 ### Variables de Entorno Críticas
 
-- **OSPOS_ENCRYPTION_KEY**: Genera una clave única de 32 caracteres
-- **Contraseñas de MySQL**: Usa contraseñas fuertes y únicas
-- **Credenciales de administrador**: Cambia inmediatamente después de la instalación
+- **OSPOS_ENCRYPTION_KEY**: Debe ser única, de 32 caracteres, y nunca compartida
+- **MYSQL_ROOT_PASSWORD**: Contraseña fuerte para el usuario root de MySQL
+- **MYSQL_PASSWORD**: Contraseña fuerte para el usuario de OSPOS
 
-### Recomendaciones Adicionales
+### Generación de Claves Seguras
 
-- Configura un dominio personalizado con SSL
-- Realiza backups regulares de la base de datos
-- Mantén actualizada la imagen de OSPOS
-- Configura un firewall adecuado
+Puedes generar claves seguras usando:
+
+```bash
+# Para la clave de encriptación (32 caracteres)
+openssl rand -base64 32 | tr -d "=+/" | cut -c1-32
+
+# Para contraseñas (25 caracteres)
+openssl rand -base64 32 | tr -d "=+/" | cut -c1-25
+```
 
 ## 📊 Servicios Existentes Considerados
 
-Este docker-compose ha sido diseñado considerando que ya tienes los siguientes servicios en tu Easypanel:
+Este docker-compose ha sido optimizado para Easypanel y es compatible con tus servicios existentes:
 
 - n8n
 - Chatwoot
@@ -102,7 +132,11 @@ Este docker-compose ha sido diseñado considerando que ya tienes los siguientes 
 - Redis
 - Qdrant
 
-**Los puertos han sido eliminados** para evitar conflictos y permitir que Easypanel asigne automáticamente puertos disponibles.
+**Características de compatibilidad:**
+- Sin `container_name` para evitar conflictos
+- Sin `version` (obsoleto en Docker Compose)
+- Sin puertos específicos (Easypanel asigna automáticamente)
+- Red interna aislada
 
 ## 🗄️ Gestión de Datos
 
@@ -114,46 +148,62 @@ El compose crea los siguientes volúmenes para persistir datos:
 - `ospos_uploads`: Archivos subidos (imágenes de productos, etc.)
 - `ospos_logs`: Logs de la aplicación
 
-### Backup de Base de Datos
+### Backup desde Easypanel
 
-Para hacer backup de la base de datos:
-
-```bash
-# Desde el contenedor MySQL
-docker exec ospos-mysql mysqldump -u ospos_user -p ospos > backup_ospos.sql
-```
+1. Ve a **Services** → **ospos** → **Backups**
+2. Configura backup automático de volúmenes
+3. Frecuencia recomendada: diaria
+4. Retención recomendada: 7-30 días
 
 ## 🔧 Solución de Problemas
 
 ### Problemas Comunes
 
 1. **Error de conexión a la base de datos**:
-   - Verifica que las credenciales coincidan entre los servicios
-   - Asegúrate de que el servicio MySQL esté corriendo
+   - Verifica que las variables `MYSQL_PASSWORD` y `DB_PASSWORD` coincidan
+   - Revisa los logs del servicio `ospos-db`
 
-2. **Problemas de permisos**:
-   - Verifica que los volúmenes tengan los permisos correctos
+2. **Error 500 en la aplicación**:
+   - Verifica que `OSPOS_ENCRYPTION_KEY` esté configurada
+   - Revisa los logs del servicio `ospos-app`
 
-3. **Error 500 en la aplicación**:
-   - Revisa los logs del contenedor: `docker logs ospos-web`
-   - Verifica la configuración de la clave de encriptación
+3. **Problemas de despliegue**:
+   - Verifica que la URL del repositorio Git sea correcta
+   - Asegúrate de que todas las variables obligatorias estén configuradas
 
-### Logs
+### Acceso a Logs
 
-Para revisar los logs de los servicios:
+Desde Easypanel:
+1. Ve a **Services** → **ospos**
+2. Selecciona el contenedor específico
+3. Ve a la pestaña **Logs**
 
-```bash
-# Logs de la aplicación web
-docker logs ospos-web
+### Reiniciar Servicios
 
-# Logs de la base de datos
-docker logs ospos-mysql
-```
+Si necesitas reiniciar:
+1. Ve a **Services** → **ospos**
+2. Haz clic en **Restart**
+3. Espera a que ambos contenedores se reinicien
+
+## 🔄 Actualizaciones
+
+### Actualizar OSPOS
+
+1. Ve a **Services** → **ospos**
+2. Haz clic en **Redeploy**
+3. Easypanel descargará la imagen más reciente
+
+### Actualizar Configuración
+
+1. Modifica las variables de entorno en Easypanel
+2. Haz clic en **Redeploy**
+3. Los cambios se aplicarán automáticamente
 
 ## 📞 Soporte
 
 - **Documentación oficial de OSPOS**: [https://github.com/opensourcepos/opensourcepos](https://github.com/opensourcepos/opensourcepos)
 - **Wiki de OSPOS**: [https://github.com/opensourcepos/opensourcepos/wiki](https://github.com/opensourcepos/opensourcepos/wiki)
+- **Documentación de Easypanel**: [https://easypanel.io/docs](https://easypanel.io/docs)
 
 ## 📝 Licencia
 
@@ -161,4 +211,8 @@ Este proyecto de configuración está bajo licencia MIT. OSPOS tiene su propia l
 
 ---
 
-**¡Importante!** Recuerda cambiar todas las contraseñas y claves por defecto antes de usar en producción.
+**⚠️ IMPORTANTE:** 
+- Cambia TODAS las contraseñas por defecto antes de usar en producción
+- Configura backups automáticos
+- Mantén actualizada la aplicación
+- Monitorea regularmente los logs de seguridad
