@@ -17,6 +17,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-pointofsale}
       - MYSQL_DB_NAME=${MYSQL_DB_NAME:-ospos}
       - MYSQL_HOST_NAME=ospos-db
+    expose:
+      - "80"
 
   ospos-db:
     image: mysql:8.0
