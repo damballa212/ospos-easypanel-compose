@@ -1,212 +1,312 @@
 # Configuración Específica para Easypanel
 
-Este documento contiene configuraciones específicas y optimizaciones para desplegar OSPOS en Easypanel.
+Esta guía contiene configuraciones específicas y optimizaciones para desplegar OSPOS en Easypanel de manera eficiente.
 
-## 🎯 Configuración Recomendada en Easypanel
+## 🎯 Configuración del Servicio en Easypanel
 
-### 1. Configuración del Servicio
+### Información del Servicio
 
-**Nombre del Servicio**: `ospos`
-**Tipo**: Compose
-**Descripción**: Sistema de Punto de Venta Open Source
+- **Tipo de Servicio**: Compose
+- **Fuente**: Git Repository
+- **URL del Repositorio**: `https://github.com/damballa212/ospos-easypanel-compose.git`
+- **Rama**: `main`
+- **Ruta de Compilación**: `/`
+- **Archivo Docker Compose**: `docker-compose.yml`
 
-### 2. Variables de Entorno en Easypanel
-
-Easypanel permite configurar variables de entorno directamente en la interfaz. Configura las siguientes:
+### Variables de Entorno Obligatorias
 
 ```bash
-# Base de Datos
-MYSQL_ROOT_PASSWORD=tu_password_root_seguro
+# Base de Datos MySQL
+MYSQL_ROOT_PASSWORD=tu_password_root_muy_seguro_32_chars
+MYSQL_PASSWORD=tu_password_ospos_muy_seguro_32_chars
 MYSQL_DATABASE=ospos
 MYSQL_USER=ospos_user
-MYSQL_PASSWORD=tu_password_ospos_seguro
 
-# Aplicación
-DB_HOST=ospos-db
-DB_NAME=ospos
-DB_USER=ospos_user
-DB_PASSWORD=tu_password_ospos_seguro
-DB_PORT=3306
+# Aplicación OSPOS
+OSPOS_ENCRYPTION_KEY=tu-clave-de-encriptacion-32-caracteres
+```
 
+### Variables de Entorno Opcionales
+
+```bash
 # Configuración Regional
 OSPOS_TIMEZONE=America/Mexico_City
 OSPOS_LANGUAGE=spanish
 
-# Seguridad
-OSPOS_ENCRYPTION_KEY=tu-clave-de-32-caracteres-aqui
+# Email (SMTP)
+OSPOS_MAIL_PROTOCOL=smtp
+OSPOS_MAIL_HOST=smtp.gmail.com
+OSPOS_MAIL_PORT=587
+OSPOS_MAIL_USERNAME=tu-email@empresa.com
+OSPOS_MAIL_PASSWORD=tu-app-password
+OSPOS_MAIL_CRYPTO=tls
+
+# Dominio (si usas dominio personalizado)
+VIRTUAL_HOST=ospos.tudominio.com
+LETSENCRYPT_HOST=ospos.tudominio.com
 ```
 
-### 3. Configuración de Red
+## 🔧 Configuración de Red y Volúmenes
 
-**Red Interna**: Easypanel creará automáticamente una red interna para la comunicación entre contenedores.
+### Red Interna
 
-**Puertos**: Los puertos se asignan automáticamente. Easypanel proporcionará:
-- URL pública para acceder a OSPOS
-- Puerto interno para MySQL (no expuesto públicamente)
+El docker-compose crea una red interna `ospos-network` que:
+- Aísla los servicios de OSPOS
+- Permite comunicación entre `ospos-app` y `ospos-db`
+- Es compatible con otros servicios en Easypanel
 
-### 4. Configuración de Volúmenes
+### Volúmenes Persistentes
 
-Easypanel gestionará automáticamente los volúmenes persistentes:
+| Volumen | Propósito | Backup Recomendado |
+|---------|-----------|--------------------|
+| `ospos_mysql_data` | Datos de MySQL | ✅ Crítico - Diario |
+| `ospos_uploads` | Archivos subidos | ✅ Importante - Diario |
+| `ospos_logs` | Logs de aplicación | ⚠️ Opcional - Semanal |
 
-- **ospos_mysql_data**: Datos de MySQL
-- **ospos_uploads**: Archivos subidos
-- **ospos_logs**: Logs de la aplicación
+## 🌐 Configuración de Dominio y SSL
 
-### 5. Configuración de Dominio
+### Opción 1: Subdominio de Easypanel (Automático)
 
-#### Opción A: Subdominio de Easypanel
-Easypanel proporcionará automáticamente un subdominio como:
-`https://ospos-[random].easypanel.host`
+Easypanel asignará automáticamente:
+- URL: `https://tu-servicio.tu-panel.easypanel.host`
+- SSL: Certificado automático
+- Sin configuración adicional requerida
 
-#### Opción B: Dominio Personalizado
-Para usar tu propio dominio:
+### Opción 2: Dominio Personalizado
 
-1. Ve a **Settings** → **Domains**
-2. Añade tu dominio: `ospos.tudominio.com`
-3. Configura los registros DNS:
+1. **Configurar DNS**:
    ```
-   Type: CNAME
-   Name: ospos
-   Value: [tu-servidor-easypanel].easypanel.host
+   Tipo: CNAME
+   Nombre: ospos
+   Valor: tu-panel.easypanel.host
    ```
 
-### 6. Configuración SSL
+2. **Agregar variables de entorno**:
+   ```bash
+   VIRTUAL_HOST=ospos.tudominio.com
+   LETSENCRYPT_HOST=ospos.tudominio.com
+   ```
 
-Easypanel configurará automáticamente SSL usando Let's Encrypt:
-- Certificado SSL automático
-- Renovación automática
-- Redirección HTTP → HTTPS
+3. **Configurar en Easypanel**:
+   - Ve a **Services** → **ospos** → **Domains**
+   - Agrega tu dominio personalizado
+   - Habilita SSL automático
 
-## 🔧 Optimizaciones para Easypanel
+## 📊 Recursos Recomendados
 
-### 1. Recursos Recomendados
+### Configuración Mínima
 
-**Para uso básico (1-5 usuarios concurrentes):**
-- CPU: 1 vCore
-- RAM: 1GB
-- Almacenamiento: 10GB
+- **CPU**: 1 vCPU
+- **RAM**: 1 GB
+- **Almacenamiento**: 10 GB
+- **Usuarios concurrentes**: 5-10
 
-**Para uso medio (5-20 usuarios concurrentes):**
-- CPU: 2 vCores
-- RAM: 2GB
-- Almacenamiento: 20GB
+### Configuración Recomendada
 
-**Para uso intensivo (20+ usuarios concurrentes):**
-- CPU: 4 vCores
-- RAM: 4GB
-- Almacenamiento: 50GB
+- **CPU**: 2 vCPU
+- **RAM**: 2 GB
+- **Almacenamiento**: 20 GB
+- **Usuarios concurrentes**: 20-50
 
-### 2. Configuración de Health Checks
+### Configuración para Alto Tráfico
 
-Easypanel incluye health checks automáticos, pero puedes personalizar:
+- **CPU**: 4 vCPU
+- **RAM**: 4 GB
+- **Almacenamiento**: 50 GB
+- **Usuarios concurrentes**: 100+
 
-```yaml
-healthcheck:
-  test: ["CMD", "curl", "-f", "http://localhost/index.php"]
-  interval: 30s
-  timeout: 10s
-  retries: 3
-  start_period: 60s
+## 🔍 Health Checks y Monitoreo
+
+### Health Checks Incluidos
+
+El docker-compose incluye health checks para:
+
+- **MySQL**: Verifica conectividad cada 30 segundos
+- **OSPOS App**: Verifica respuesta HTTP cada 30 segundos
+
+### Monitoreo en Easypanel
+
+1. **Métricas de Recursos**:
+   - CPU y memoria en tiempo real
+   - Uso de almacenamiento
+   - Tráfico de red
+
+2. **Logs Centralizados**:
+   - Logs de aplicación
+   - Logs de base de datos
+   - Logs de sistema
+
+3. **Alertas Recomendadas**:
+   - CPU > 80% por 5 minutos
+   - Memoria > 90% por 5 minutos
+   - Servicio no disponible por 2 minutos
+
+## 💾 Estrategia de Backup
+
+### Backup Automático en Easypanel
+
+1. **Configurar Backup**:
+   - Ve a **Services** → **ospos** → **Backups**
+   - Habilita backup automático
+   - Selecciona todos los volúmenes
+
+2. **Configuración Recomendada**:
+   ```
+   Frecuencia: Diaria a las 2:00 AM
+   Retención: 7 días (mínimo)
+   Compresión: Habilitada
+   Notificaciones: Email en fallos
+   ```
+
+### Backup Manual de Base de Datos
+
+```bash
+# Desde la terminal de Easypanel
+docker exec ospos-db mysqldump -u root -p ospos > backup_$(date +%Y%m%d).sql
 ```
-
-### 3. Configuración de Logs
-
-Easypanel centraliza los logs automáticamente. Puedes acceder a ellos desde:
-- **Dashboard** → **Services** → **ospos** → **Logs**
-
-### 4. Backup Automático
-
-Configura backups automáticos en Easypanel:
-
-1. Ve a **Settings** → **Backups**
-2. Configura backup diario de volúmenes
-3. Retención recomendada: 7 días
 
 ## 🚀 Proceso de Despliegue Paso a Paso
 
-### Paso 1: Preparación
-1. Accede a tu panel de Easypanel
-2. Asegúrate de tener suficientes recursos disponibles
-3. Ten listas las credenciales que vas a usar
+### 1. Preparación
 
-### Paso 2: Crear el Servicio
-1. **Services** → **Create Service**
-2. Selecciona **Compose**
-3. Nombre: `ospos`
-4. Descripción: `Sistema POS Open Source`
+- [ ] VPS con Easypanel funcionando
+- [ ] Dominio configurado (opcional)
+- [ ] Variables de entorno preparadas
 
-### Paso 3: Configurar el Compose
-1. Copia el contenido de `docker-compose.yml`
-2. Pégalo en el editor de Easypanel
-3. Revisa que no haya errores de sintaxis
+### 2. Crear Servicio
 
-### Paso 4: Configurar Variables
-1. Ve a la pestaña **Environment**
-2. Añade todas las variables necesarias
-3. **¡IMPORTANTE!** Cambia todas las contraseñas por defecto
+1. **Easypanel Dashboard** → **Services** → **Create Service**
+2. **Template**: Compose
+3. **Name**: `ospos`
+4. **Source**: Git Repository
 
-### Paso 5: Desplegar
-1. Haz clic en **Deploy**
-2. Espera a que se descarguen las imágenes
-3. Verifica que ambos contenedores estén corriendo
+### 3. Configurar Git
 
-### Paso 6: Verificación
-1. Accede a la URL proporcionada por Easypanel
-2. Verifica que OSPOS carga correctamente
-3. Inicia sesión con credenciales por defecto
-4. **¡CRÍTICO!** Cambia inmediatamente la contraseña de admin
+1. **Repository URL**: `https://github.com/damballa212/ospos-easypanel-compose.git`
+2. **Branch**: `main`
+3. **Build Path**: `/`
+4. **Compose File**: `docker-compose.yml`
 
-## 🔍 Monitoreo y Mantenimiento
+### 4. Variables de Entorno
 
-### Métricas Importantes
-- **CPU Usage**: Debe mantenerse < 80%
-- **Memory Usage**: Debe mantenerse < 85%
-- **Disk Usage**: Monitorear crecimiento de la base de datos
-- **Response Time**: Debe ser < 2 segundos
+Copia y pega las variables obligatorias, modificando los valores:
 
-### Logs a Monitorear
-- **ospos-web**: Errores de aplicación
-- **ospos-mysql**: Errores de base de datos
-- **Easypanel**: Errores de infraestructura
+```bash
+MYSQL_ROOT_PASSWORD=tu_password_root_muy_seguro_32_chars
+MYSQL_PASSWORD=tu_password_ospos_muy_seguro_32_chars
+MYSQL_DATABASE=ospos
+MYSQL_USER=ospos_user
+OSPOS_ENCRYPTION_KEY=tu-clave-de-encriptacion-32-caracteres
+OSPOS_TIMEZONE=America/Mexico_City
+OSPOS_LANGUAGE=spanish
+```
+
+### 5. Desplegar
+
+1. **Deploy** → Esperar descarga de imágenes
+2. **Verificar** → Ambos contenedores corriendo
+3. **Acceder** → URL proporcionada por Easypanel
+
+### 6. Configuración Post-Despliegue
+
+1. **Login inicial**: admin / pointofsale
+2. **Cambiar contraseña** inmediatamente
+3. **Configurar empresa** y datos fiscales
+4. **Configurar backup** automático
+
+## 🔧 Troubleshooting Específico de Easypanel
+
+### Problemas de Despliegue
+
+1. **Error: "Repository not found"**
+   - Verifica la URL del repositorio
+   - Asegúrate de que el repositorio sea público
+
+2. **Error: "Compose file not found"**
+   - Verifica que `docker-compose.yml` esté en la raíz
+   - Revisa la ruta de compilación (`/`)
+
+3. **Error: "Environment variable missing"**
+   - Verifica que todas las variables obligatorias estén configuradas
+   - Revisa que no haya espacios en los nombres de variables
+
+### Problemas de Conectividad
+
+1. **No se puede acceder a la aplicación**
+   - Verifica que el servicio esté corriendo
+   - Revisa los logs del contenedor `ospos-app`
+   - Verifica la configuración de dominio
+
+2. **Error de base de datos**
+   - Verifica que `ospos-db` esté corriendo
+   - Revisa las credenciales de MySQL
+   - Verifica la conectividad de red interna
+
+### Problemas de Rendimiento
+
+1. **Aplicación lenta**
+   - Aumenta recursos de CPU/RAM
+   - Verifica uso de almacenamiento
+   - Revisa logs por errores
+
+2. **Timeouts frecuentes**
+   - Aumenta límites de memoria
+   - Verifica configuración de health checks
+   - Considera optimización de base de datos
+
+## 📈 Optimizaciones Avanzadas
+
+### Optimización de MySQL
+
+Agregar variables de entorno para MySQL:
+
+```bash
+# Optimizaciones de rendimiento
+MYSQL_INNODB_BUFFER_POOL_SIZE=256M
+MYSQL_INNODB_LOG_FILE_SIZE=64M
+MYSQL_MAX_CONNECTIONS=100
+MYSQL_QUERY_CACHE_SIZE=32M
+```
+
+### Optimización de PHP
+
+Agregar variables para la aplicación:
+
+```bash
+# Límites de PHP
+PHP_MEMORY_LIMIT=256M
+PHP_MAX_EXECUTION_TIME=300
+PHP_UPLOAD_MAX_FILESIZE=10M
+PHP_POST_MAX_SIZE=10M
+```
+
+### Caché y Sesiones
+
+```bash
+# Configuración de sesiones
+SESSION_SAVE_HANDLER=files
+SESSION_SAVE_PATH=/var/lib/php/sessions
+
+# Caché de aplicación
+CACHE_DRIVER=file
+CACHE_PATH=/var/www/html/application/cache
+```
+
+## 🔄 Actualizaciones y Mantenimiento
+
+### Actualización de OSPOS
+
+1. **Backup completo** antes de actualizar
+2. **Services** → **ospos** → **Redeploy**
+3. **Verificar** funcionamiento post-actualización
+4. **Rollback** si hay problemas
 
 ### Mantenimiento Regular
-- **Semanal**: Revisar logs de errores
-- **Mensual**: Verificar uso de recursos
-- **Trimestral**: Actualizar imágenes Docker
-- **Semestral**: Revisar y optimizar base de datos
 
-## 🆘 Solución de Problemas Específicos de Easypanel
+- **Semanal**: Revisar logs y métricas
+- **Mensual**: Verificar backups y espacio en disco
+- **Trimestral**: Actualizar contraseñas y revisar seguridad
 
-### Problema: Servicio no inicia
-**Solución**:
-1. Revisa los logs en **Services** → **ospos** → **Logs**
-2. Verifica que las variables de entorno estén correctas
-3. Asegúrate de que no hay conflictos de puertos
+---
 
-### Problema: Error de conexión a base de datos
-**Solución**:
-1. Verifica que el contenedor MySQL esté corriendo
-2. Revisa las credenciales de base de datos
-3. Verifica la conectividad de red interna
-
-### Problema: SSL no funciona
-**Solución**:
-1. Verifica la configuración del dominio
-2. Revisa los registros DNS
-3. Espera hasta 24 horas para propagación DNS
-
-### Problema: Rendimiento lento
-**Solución**:
-1. Aumenta los recursos asignados
-2. Optimiza la base de datos
-3. Revisa los logs para identificar cuellos de botella
-
-## 📞 Soporte
-
-Para soporte específico de Easypanel:
-- **Documentación**: [Easypanel Docs](https://easypanel.io/docs)
-- **Comunidad**: [Discord de Easypanel](https://discord.gg/easypanel)
-
-Para soporte de OSPOS:
-- **GitHub**: [OSPOS Issues](https://github.com/opensourcepos/opensourcepos/issues)
-- **Wiki**: [OSPOS Wiki](https://github.com/opensourcepos/opensourcepos/wiki)
+**💡 Tip**: Mantén este archivo actualizado con tus configuraciones específicas y personalizaciones para futuras referencias.
