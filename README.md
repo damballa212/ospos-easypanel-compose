@@ -2,6 +2,15 @@
 
 Este repositorio contiene la configuración necesaria para instalar **Open Source Point of Sale (OSPOS)** en tu VPS de Hostinger usando Easypanel con la plantilla "Compose" desde Git.
 
+## 🐳 Imágenes Docker Utilizadas
+
+Este proyecto utiliza las **imágenes oficiales de OSPOS**:
+- **ospos-app**: `jekkos/opensourcepos:master` - Aplicación principal OSPOS
+- **ospos-db**: `mysql:8.0` - Base de datos MySQL
+- **ospos-sql-init**: `jekkos/opensourcepos:sql-master` - Inicialización de base de datos
+
+> ⚠️ **Nota importante**: Las imágenes `opensourcepos/opensourcepos` no existen en Docker Hub. Este repositorio ha sido corregido para usar las imágenes oficiales mantenidas por el proyecto OSPOS.
+
 ## 📋 Requisitos Previos
 
 - VPS con Hostinger
@@ -34,36 +43,35 @@ En la sección **Environment** de Easypanel, configura las siguientes variables:
 # Credenciales de Base de Datos (CAMBIAR POR SEGURIDAD)
 MYSQL_ROOT_PASSWORD=tu_password_root_muy_seguro
 MYSQL_PASSWORD=tu_password_ospos_muy_seguro
-MYSQL_DATABASE=ospos
-MYSQL_USER=ospos_user
+MYSQL_DB_NAME=ospos
+MYSQL_USERNAME=admin
 
-# Clave de Encriptación (32 caracteres - CRÍTICO)
-OSPOS_ENCRYPTION_KEY=tu-clave-de-32-caracteres-unica
+# Configuración de la Aplicación
+CI_ENVIRONMENT=production
+FORCE_HTTPS=false
+PHP_TIMEZONE=UTC
 ```
 
 #### Variables Opcionales:
 ```bash
 # Configuración Regional
-OSPOS_TIMEZONE=America/Mexico_City
-OSPOS_LANGUAGE=spanish
-
-# Configuración de Email (opcional)
-OSPOS_MAIL_PROTOCOL=smtp
-OSPOS_MAIL_HOST=smtp.gmail.com
-OSPOS_MAIL_PORT=587
-OSPOS_MAIL_USERNAME=tu-email@gmail.com
-OSPOS_MAIL_PASSWORD=tu-password-de-aplicacion
-OSPOS_MAIL_CRYPTO=tls
+PHP_TIMEZONE=America/Mexico_City
+CI_ENVIRONMENT=development  # Para desarrollo
+FORCE_HTTPS=true  # Si usas HTTPS
 ```
 
 ### Paso 4: Desplegar el Servicio
 
 1. Haz clic en **Deploy** en Easypanel
 2. Espera a que se clone el repositorio
-3. Espera a que se descarguen las imágenes Docker
-4. Verifica que ambos servicios estén corriendo:
-   - `ospos-db` (Base de datos MySQL)
+3. Espera a que se descarguen las imágenes Docker:
+   - `jekkos/opensourcepos:master`
+   - `mysql:8.0`
+   - `jekkos/opensourcepos:sql-master`
+4. Verifica que los servicios estén corriendo:
    - `ospos-app` (Aplicación web OSPOS)
+   - `ospos-db` (Base de datos MySQL)
+   - `ospos-sql-init` (Inicialización completada)
 
 ## 🔧 Configuración Post-Instalación
 
@@ -82,9 +90,9 @@ OSPOS_MAIL_CRYPTO=tls
    - Ve a `Empleados` → `Administrar Empleados`
    - Edita el usuario admin y cambia la contraseña
 
-2. **Verificar clave de encriptación**:
-   - Asegúrate de haber configurado `OSPOS_ENCRYPTION_KEY` con 32 caracteres únicos
-   - Nunca uses la clave por defecto en producción
+2. **Configurar variables de entorno seguras**:
+   - Cambia `MYSQL_ROOT_PASSWORD` y `MYSQL_PASSWORD`
+   - Usa contraseñas fuertes y únicas
 
 ### Configuración Inicial Recomendada
 
@@ -104,21 +112,32 @@ OSPOS_MAIL_CRYPTO=tls
 
 ### Variables de Entorno Críticas
 
-- **OSPOS_ENCRYPTION_KEY**: Debe ser única, de 32 caracteres, y nunca compartida
 - **MYSQL_ROOT_PASSWORD**: Contraseña fuerte para el usuario root de MySQL
 - **MYSQL_PASSWORD**: Contraseña fuerte para el usuario de OSPOS
+- **CI_ENVIRONMENT**: Usar `production` en producción
 
-### Generación de Claves Seguras
+### Generación de Contraseñas Seguras
 
-Puedes generar claves seguras usando:
+Puedes generar contraseñas seguras usando:
 
 ```bash
-# Para la clave de encriptación (32 caracteres)
-openssl rand -base64 32 | tr -d "=+/" | cut -c1-32
-
 # Para contraseñas (25 caracteres)
 openssl rand -base64 32 | tr -d "=+/" | cut -c1-25
 ```
+
+## 🛠️ Solución del Error "pull access denied"
+
+Si encuentras el error:
+```
+pull access denied for opensourcepos/opensourcepos, repository does not exist
+```
+
+**Solución**: Este repositorio ya está corregido con las imágenes oficiales:
+- ✅ `jekkos/opensourcepos:master` (en lugar de `opensourcepos/opensourcepos`)
+- ✅ `mysql:8.0`
+- ✅ `jekkos/opensourcepos:sql-master`
+
+Simplemente redespliega el servicio desde Easypanel y el error se resolverá.
 
 ## 📊 Servicios Existentes Considerados
 
@@ -136,7 +155,7 @@ Este docker-compose ha sido optimizado para Easypanel y es compatible con tus se
 - Sin `container_name` para evitar conflictos
 - Sin `version` (obsoleto en Docker Compose)
 - Sin puertos específicos (Easypanel asigna automáticamente)
-- Red interna aislada
+- Red interna aislada (`ospos-network`)
 
 ## 🗄️ Gestión de Datos
 
@@ -144,9 +163,10 @@ Este docker-compose ha sido optimizado para Easypanel y es compatible con tus se
 
 El compose crea los siguientes volúmenes para persistir datos:
 
-- `ospos_mysql_data`: Datos de la base de datos MySQL
-- `ospos_uploads`: Archivos subidos (imágenes de productos, etc.)
-- `ospos_logs`: Logs de la aplicación
+- `ospos-db-data`: Datos de la base de datos MySQL
+- `ospos-db-init`: Scripts de inicialización de base de datos
+- `ospos-uploads`: Archivos subidos (imágenes de productos, etc.)
+- `ospos-logs`: Logs de la aplicación
 
 ### Backup desde Easypanel
 
@@ -159,15 +179,19 @@ El compose crea los siguientes volúmenes para persistir datos:
 
 ### Problemas Comunes
 
-1. **Error de conexión a la base de datos**:
-   - Verifica que las variables `MYSQL_PASSWORD` y `DB_PASSWORD` coincidan
+1. **Error "pull access denied"**:
+   - ✅ **Solucionado**: Este repositorio usa las imágenes oficiales correctas
+   - Redespliega el servicio desde Easypanel
+
+2. **Error de conexión a la base de datos**:
+   - Verifica que las variables `MYSQL_PASSWORD` y `MYSQL_USERNAME` estén configuradas
    - Revisa los logs del servicio `ospos-db`
 
-2. **Error 500 en la aplicación**:
-   - Verifica que `OSPOS_ENCRYPTION_KEY` esté configurada
+3. **Error 500 en la aplicación**:
+   - Verifica que `CI_ENVIRONMENT` esté configurada
    - Revisa los logs del servicio `ospos-app`
 
-3. **Problemas de despliegue**:
+4. **Problemas de despliegue**:
    - Verifica que la URL del repositorio Git sea correcta
    - Asegúrate de que todas las variables obligatorias estén configuradas
 
@@ -183,7 +207,7 @@ Desde Easypanel:
 Si necesitas reiniciar:
 1. Ve a **Services** → **ospos**
 2. Haz clic en **Restart**
-3. Espera a que ambos contenedores se reinicien
+3. Espera a que todos los contenedores se reinicien
 
 ## 🔄 Actualizaciones
 
@@ -191,7 +215,9 @@ Si necesitas reiniciar:
 
 1. Ve a **Services** → **ospos**
 2. Haz clic en **Redeploy**
-3. Easypanel descargará la imagen más reciente
+3. Easypanel descargará las imágenes más recientes:
+   - `jekkos/opensourcepos:master`
+   - `jekkos/opensourcepos:sql-master`
 
 ### Actualizar Configuración
 
@@ -204,6 +230,7 @@ Si necesitas reiniciar:
 - **Documentación oficial de OSPOS**: [https://github.com/opensourcepos/opensourcepos](https://github.com/opensourcepos/opensourcepos)
 - **Wiki de OSPOS**: [https://github.com/opensourcepos/opensourcepos/wiki](https://github.com/opensourcepos/opensourcepos/wiki)
 - **Documentación de Easypanel**: [https://easypanel.io/docs](https://easypanel.io/docs)
+- **Imágenes Docker oficiales**: [https://hub.docker.com/u/jekkos](https://hub.docker.com/u/jekkos)
 
 ## 📝 Licencia
 
@@ -216,3 +243,4 @@ Este proyecto de configuración está bajo licencia MIT. OSPOS tiene su propia l
 - Configura backups automáticos
 - Mantén actualizada la aplicación
 - Monitorea regularmente los logs de seguridad
+- Este repositorio corrige el error "pull access denied" usando imágenes oficiales
