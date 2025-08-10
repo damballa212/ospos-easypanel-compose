@@ -125,59 +125,44 @@ Puedes generar contraseñas seguras usando:
 openssl rand -base64 32 | tr -d "=+/" | cut -c1-25
 ```
 
-## 🛠️ Solución del Error "pull access denied"
+## 🛠️ Solución de Problemas
 
-Si encuentras el error:
-```
-pull access denied for opensourcepos/opensourcepos, repository does not exist
-```
+### ❌ Error "Service is not reachable"
 
-**Solución**: Este repositorio ya está corregido con las imágenes oficiales:
-- ✅ `jekkos/opensourcepos:master` (en lugar de `opensourcepos/opensourcepos`)
-- ✅ `mysql:8.0`
-- ✅ `jekkos/opensourcepos:sql-master`
+Si ves el mensaje "Service is not reachable" en Easypanel:
 
-Simplemente redespliega el servicio desde Easypanel y el error se resolverá.
+#### Solución 1: Verificar Puerto Expuesto
+1. **Problema**: El servicio no está exponiendo el puerto 80 correctamente
+2. **Solución**: El `docker-compose.yml` ha sido actualizado con `expose: - "80"`
+3. **Acción**: Redespliega el servicio desde Easypanel
 
-## 📊 Servicios Existentes Considerados
+#### Solución 2: Configurar Dominio en Easypanel
+1. Ve a tu servicio OSPOS en Easypanel
+2. En la sección **Domains**, agrega un dominio o subdominio
+3. Ejemplo: `ospos.tudominio.com` o usa el dominio temporal de Easypanel
+4. Guarda los cambios y espera a que se propague
 
-Este docker-compose ha sido optimizado para Easypanel y es compatible con tus servicios existentes:
+#### Solución 3: Verificar Estado de Contenedores
+1. En Easypanel, ve a **Services** → **ospos**
+2. Verifica que todos los contenedores estén en estado "Running":
+   - ✅ `ospos-app` debe estar corriendo
+   - ✅ `ospos-db` debe estar corriendo
+   - ✅ `ospos-sql-init` puede estar "Exited" (normal)
 
-- n8n
-- Chatwoot
-- Evolution API
-- PostgreSQL
-- pgAdmin
-- Redis
-- Qdrant
+#### Solución 4: Revisar Logs
+1. En Easypanel, selecciona el contenedor `ospos-app`
+2. Ve a la pestaña **Logs**
+3. Busca errores relacionados con:
+   - Conexión a base de datos
+   - Configuración de Apache/PHP
+   - Variables de entorno faltantes
 
-**Características de compatibilidad:**
-- Sin `container_name` para evitar conflictos
-- Sin `version` (obsoleto en Docker Compose)
-- Sin puertos específicos (Easypanel asigna automáticamente)
-- Red interna aislada (`ospos-network`)
+#### Solución 5: Usar Archivo Easypanel.yml
+Si el problema persiste, usa el archivo `easypanel.yml` incluido en este repositorio:
+1. En Easypanel, cambia el **Archivo Docker Compose** de `docker-compose.yml` a `easypanel.yml`
+2. Redespliega el servicio
 
-## 🗄️ Gestión de Datos
-
-### Volúmenes Persistentes
-
-El compose crea los siguientes volúmenes para persistir datos:
-
-- `ospos-db-data`: Datos de la base de datos MySQL
-- `ospos-db-init`: Scripts de inicialización de base de datos
-- `ospos-uploads`: Archivos subidos (imágenes de productos, etc.)
-- `ospos-logs`: Logs de la aplicación
-
-### Backup desde Easypanel
-
-1. Ve a **Services** → **ospos** → **Backups**
-2. Configura backup automático de volúmenes
-3. Frecuencia recomendada: diaria
-4. Retención recomendada: 7-30 días
-
-## 🔧 Solución de Problemas
-
-### Problemas Comunes
+### Problemas Comunes Adicionales
 
 1. **Error "pull access denied"**:
    - ✅ **Solucionado**: Este repositorio usa las imágenes oficiales correctas
@@ -209,6 +194,24 @@ Si necesitas reiniciar:
 2. Haz clic en **Restart**
 3. Espera a que todos los contenedores se reinicien
 
+## 🗄️ Gestión de Datos
+
+### Volúmenes Persistentes
+
+El compose crea los siguientes volúmenes para persistir datos:
+
+- `ospos-db-data`: Datos de la base de datos MySQL
+- `ospos-db-init`: Scripts de inicialización de base de datos
+- `ospos-uploads`: Archivos subidos (imágenes de productos, etc.)
+- `ospos-logs`: Logs de la aplicación
+
+### Backup desde Easypanel
+
+1. Ve a **Services** → **ospos** → **Backups**
+2. Configura backup automático de volúmenes
+3. Frecuencia recomendada: diaria
+4. Retención recomendada: 7-30 días
+
 ## 🔄 Actualizaciones
 
 ### Actualizar OSPOS
@@ -224,6 +227,24 @@ Si necesitas reiniciar:
 1. Modifica las variables de entorno en Easypanel
 2. Haz clic en **Redeploy**
 3. Los cambios se aplicarán automáticamente
+
+## 📊 Servicios Existentes Considerados
+
+Este docker-compose ha sido optimizado para Easypanel y es compatible con tus servicios existentes:
+
+- n8n
+- Chatwoot
+- Evolution API
+- PostgreSQL
+- pgAdmin
+- Redis
+- Qdrant
+
+**Características de compatibilidad:**
+- Sin `container_name` para evitar conflictos
+- Sin `version` (obsoleto en Docker Compose)
+- Puerto 80 expuesto correctamente para Easypanel
+- Red interna aislada (`ospos-network`)
 
 ## 📞 Soporte
 
@@ -244,3 +265,4 @@ Este proyecto de configuración está bajo licencia MIT. OSPOS tiene su propia l
 - Mantén actualizada la aplicación
 - Monitorea regularmente los logs de seguridad
 - Este repositorio corrige el error "pull access denied" usando imágenes oficiales
+- **Si ves "Service is not reachable", sigue las soluciones en la sección de problemas**
